@@ -1,7 +1,8 @@
 # Malabar Chestnut Classification
-[![os](https://img.shields.io/badge/Ubuntu-16.04-orange) ![python](https://img.shields.io/badge/Python-3.6-orange)](https://www.youtube.com/watch?v=wa0uvWAV5Xc)
+![os](https://img.shields.io/badge/Ubuntu-16.04-orange) ![python](https://img.shields.io/badge/Python-3.6-orange)
 
-![](images/up.png)
+[![](images/up.png)](https://www.youtube.com/watch?v=wa0uvWAV5Xc)
+
 This project is detect the orientation of a malabar seed. Classify the orientation into up, down, side based on the location of the hilum. See full demo video [here](https://www.youtube.com/watch?v=wa0uvWAV5Xc).
 
 
