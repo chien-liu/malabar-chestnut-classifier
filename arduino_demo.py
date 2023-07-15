@@ -30,10 +30,8 @@ Communications Protocol with Arduino Uno:
 
 '''
 
-import numpy as np
 import cv2
 from net.vgg19 import VGG19
-import time
 import serial
 
 CAM_PORT = 1
@@ -42,15 +40,12 @@ SERIAL_PORT = '/dev/ttyACM0'
 def check_img(cap, vgg19):
 
     # flush cam buffer (0.2 sec)
-    foo, boo = cap.read()
-    foo, boo = cap.read()
-    foo, boo = cap.read()
-    foo, boo = cap.read()
-    foo, boo = cap.read()
+    for _ in range(5):
+        cap.read()
 
-    ret, img = cap.read()
+    _, img = cap.read()
     label = vgg19.predict(img) # label = 'u', 'd', 'm' # 0.8s
-    
+
     # Add highlight on webcam image.
     # Different colors corresponds to different labels.
     shape = (img.shape[1], img.shape[0])
@@ -92,7 +87,7 @@ if __name__ == '__main__':
 
     # Initialize VGG19 Neural Network .
     vgg19 = VGG19(vgg19_npy_path='./weights/fine_tune_weight.npy')
-    
+
     while True:
         label = check_img(cap, vgg19)
         move_motor(ser, label)
