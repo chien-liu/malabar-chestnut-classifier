@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import os
 import cv2
-import tensorflow as tf
+
 
 class BatchGenerator:
     def __init__(
@@ -14,11 +14,12 @@ class BatchGenerator:
             batch_size=32,
             path_data1='./../data/train-data/one/',
             path_data2='./../data/train-data/sequence/',
-            ):
+    ):
         self.batch_size = batch_size
         self.path_data1 = path_data1
         self.path_data2 = path_data2
-        self._dataset = pd.DataFrame(columns=['name', 'positive', 'negative', 'medium'])
+        self._dataset = pd.DataFrame(
+            columns=['name', 'positive', 'negative', 'medium'])
 
         # search data from paths
         self.search_data1(path_data1)
@@ -28,8 +29,8 @@ class BatchGenerator:
 
     def search_data1(self, path):
         files = ['positive', 'negative', 'medium']
-        ground_truths = [[1,0,0], [0,1,0,], [0,0,1]]
-        
+        ground_truths = [[1, 0, 0], [0, 1, 0,], [0, 0, 1]]
+
         names = []
         labels = []
         for file, label in zip(files, ground_truths):
@@ -38,13 +39,13 @@ class BatchGenerator:
             n = len(name)
             names.extend(full_name)
 
-            labels.append(np.array(label*n).reshape(-1,3))
+            labels.append(np.array(label*n).reshape(-1, 3))
 
         labels = np.vstack(labels)
 
         self._dataset['name'] = names
         self._dataset.iloc[:, 1:] = labels
-        
+
     def search_data2(self, path):
         files = [f for f in os.listdir(path) if os.path.isdir(path+f)]
 
@@ -55,21 +56,21 @@ class BatchGenerator:
             if os.path.exists(csvFile):
                 arr_ls.append(pd.read_csv(csvFile).values)
         arr = np.vstack(arr_ls)
-        
+
         # get name
-        name = arr[:,0]
+        name = arr[:, 0]
         full_name = [path + n for n in name]
         # get label
         label = arr[:, 1]
         one_hot_label = np.zeros((len(full_name), 3))
-        one_hot_label[(label=='u').ravel(), 0] = 1
-        one_hot_label[(label=='d').ravel(), 1] = 1
-        one_hot_label[(label=='m').ravel(), 2] = 1
+        one_hot_label[(label == 'u').ravel(), 0] = 1
+        one_hot_label[(label == 'd').ravel(), 1] = 1
+        one_hot_label[(label == 'm').ravel(), 2] = 1
         df = pd.DataFrame({'name': full_name,
-                            'positive': one_hot_label[:,0],
-                            'negative': one_hot_label[:,1],
-                            'medium': one_hot_label[:,2]},
-                            columns=['name', 'positive', 'negative', 'medium'])
+                           'positive': one_hot_label[:, 0],
+                           'negative': one_hot_label[:, 1],
+                           'medium': one_hot_label[:, 2]},
+                          columns=['name', 'positive', 'negative', 'medium'])
         self._dataset = self._dataset.append(df, ignore_index=True)
 
     def get_data(self,):
@@ -86,10 +87,10 @@ class BatchGenerator:
         for i in range(len(self._dataset) // batch_size):
 
             # generate batch_x
-            batch_x = data[i * batch_size : (i+1) * batch_size, 0]
+            batch_x = data[i * batch_size: (i+1) * batch_size, 0]
 
             # generate batch_y
-            batch_y = data[i * batch_size : (i+1) * batch_size, 1:]
+            batch_y = data[i * batch_size: (i+1) * batch_size, 1:]
 
             self.batch_xs.append(batch_x)
             self.batch_ys.append(batch_y)
@@ -100,7 +101,6 @@ class BatchGenerator:
     def get(self, batch_id):
 
         return self.distort_input(self.batch_xs[batch_id]), self.batch_ys[batch_id]
-
 
     def distort_input(self, training_files):
         """ Construct distorted input for CIFAR training using the Reader ops.
@@ -128,7 +128,7 @@ class BatchGenerator:
             crop_img = cv2.resize(crop_img, (width, height))
 
             return crop_img
-        
+
         def random_flip_left_right(img):
             number = np.random.choice([-1, 0, 1, 2])
             if number == 2:
@@ -137,11 +137,11 @@ class BatchGenerator:
                 return cv2.flip(img, number)
 
         def random_brightness(img, delta=.25):
-            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) #convert it to hsv
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)  # convert it to hsv
             random_bright = delta + np.random.uniform()
             if random_bright > 1:
-                random_bright = 1 
-            hsv[:,:,2] = hsv[:,:,2] * random_bright
+                random_bright = 1
+            hsv[:, :, 2] = hsv[:, :, 2] * random_bright
             img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
             return img
 
@@ -158,17 +158,19 @@ class BatchGenerator:
             distorted_image = random_brightness(distorted_image)
             distorted_image = random_contrast(distorted_image)
             distorted_images.append(distorted_image)
-        
+
         return np.array(distorted_images)
 
-    
+
+# def main():
+#     BG = BatchGenerator()
+#     data = BG.get_data()
+#     n = BG.len()
+
+#     x, y = BG.get(10)
+
+#     print(y.shape)
 
 
-if __name__ == '__main__':
-    BG = BatchGenerator()
-    data = BG.get_data()
-    n = BG.len()
-
-    x, y = BG.get(10)
-    
-    print(y.shape)
+# if __name__ == '__main__':
+#     main()
