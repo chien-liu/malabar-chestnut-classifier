@@ -1,11 +1,11 @@
 import os
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 import numpy as np
-import time
 import inspect
 
 import cv2
+
 
 class VGG19:
     """
@@ -30,7 +30,8 @@ class VGG19:
         self.build()
 
         self.sess = tf.Session()    # start session
-        self.sess.run(tf.global_variables_initializer())    # initialize variables
+        # initialize variables
+        self.sess.run(tf.global_variables_initializer())
 
     def build(self, train_mode=None):
         """
@@ -39,8 +40,10 @@ class VGG19:
         :param train_mode: a bool tensor, usually a placeholder: if True, dropout will be turned on
         """
         # tf.placeholder
-        self.input = tf.placeholder(tf.float32, [None, 224, 224, 3], name='input')
-        self.groundtruth = tf.placeholder(tf.float32, [None, 3], name='groundtruth')
+        self.input = tf.placeholder(
+            tf.float32, [None, 224, 224, 3], name='input')
+        self.groundtruth = tf.placeholder(
+            tf.float32, [None, 3], name='groundtruth')
         self.lr = tf.placeholder(tf.float32, [], name='learning_rate')
 
         self.conv1_1 = self.conv_layer(self.input, 3, 64, "conv1_1")
@@ -69,17 +72,20 @@ class VGG19:
         self.conv5_4 = self.conv_layer(self.conv5_3, 512, 512, "conv5_4")
         self.pool5 = self.max_pool(self.conv5_4, 'pool5')
 
-        self.fc6 = self.fc_layer(self.pool5, 25088, 4096, "fc6")  # 25088 = ((224 // (2 ** 5)) ** 2) * 512
+        # 25088 = ((224 // (2 ** 5)) ** 2) * 512
+        self.fc6 = self.fc_layer(self.pool5, 25088, 4096, "fc6")
         self.relu6 = tf.nn.relu(self.fc6)
         if train_mode is not None:
-            self.relu6 = tf.cond(train_mode, lambda: tf.nn.dropout(self.relu6, self.dropout), lambda: self.relu6)
+            self.relu6 = tf.cond(train_mode, lambda: tf.nn.dropout(
+                self.relu6, self.dropout), lambda: self.relu6)
         elif self.trainable:
             self.relu6 = tf.nn.dropout(self.relu6, self.dropout)
 
         self.fc7 = self.fc_layer(self.relu6, 4096, 4096, "fc7")
         self.relu7 = tf.nn.relu(self.fc7)
         if train_mode is not None:
-            self.relu7 = tf.cond(train_mode, lambda: tf.nn.dropout(self.relu7, self.dropout), lambda: self.relu7)
+            self.relu7 = tf.cond(train_mode, lambda: tf.nn.dropout(
+                self.relu7, self.dropout), lambda: self.relu7)
         elif self.trainable:
             self.relu7 = tf.nn.dropout(self.relu7, self.dropout)
 
@@ -93,15 +99,17 @@ class VGG19:
             self.loss = tf.reduce_mean(
                 tf.nn.softmax_cross_entropy_with_logits(
                     labels=self.groundtruth, logits=self.fc8))
-            self.optimizer = tf.train.AdamOptimizer(self.lr).minimize(self.loss)
+            self.optimizer = tf.train.AdamOptimizer(
+                self.lr).minimize(self.loss)
             var_list = [v for v in tf.trainable_variables() if 'fc8' in v.name]
-            self.partial_optimizer = tf.train.AdamOptimizer(self.lr).minimize(self.loss, var_list=var_list)
-            
+            self.partial_optimizer = tf.train.AdamOptimizer(
+                self.lr).minimize(self.loss, var_list=var_list)
+
         with tf.variable_scope('accuracy'):
             self.correct_prediction = tf.equal(
-                tf.argmax(self.prob,1), tf.argmax(self.groundtruth,1))
-            self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
-
+                tf.argmax(self.prob, 1), tf.argmax(self.groundtruth, 1))
+            self.accuracy = tf.reduce_mean(
+                tf.cast(self.correct_prediction, tf.float32))
 
     def avg_pool(self, bottom, name):
         return tf.nn.avg_pool(bottom, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
@@ -111,7 +119,8 @@ class VGG19:
 
     def conv_layer(self, bottom, in_channels, out_channels, name):
         with tf.variable_scope(name):
-            filt, conv_biases = self.get_conv_var(3, in_channels, out_channels, name)
+            filt, conv_biases = self.get_conv_var(
+                3, in_channels, out_channels, name)
 
             conv = tf.nn.conv2d(bottom, filt, [1, 1, 1, 1], padding='SAME')
             bias = tf.nn.bias_add(conv, conv_biases)
@@ -129,7 +138,8 @@ class VGG19:
             return fc
 
     def get_conv_var(self, filter_size, in_channels, out_channels, name):
-        initial_value = tf.truncated_normal([filter_size, filter_size, in_channels, out_channels], 0.0, 0.001)
+        initial_value = tf.truncated_normal(
+            [filter_size, filter_size, in_channels, out_channels], 0.0, 0.001)
         filters = self.get_var(initial_value, name, 0, name + "_filters")
 
         initial_value = tf.truncated_normal([out_channels], .0, .001)
@@ -178,12 +188,6 @@ class VGG19:
         print(("file saved", npy_path))
         return npy_path
 
-    def get_var_count(self):
-        count = 0
-        for v in list(self.var_dict.values()):
-            count += reduce(lambda x, y: x * y, v.get_shape().as_list())
-        return count
-
     def test(self, batch_x, batch_y):
         fd = {}
         fd[self.input] = batch_x
@@ -194,7 +198,7 @@ class VGG19:
 
     def predict(self, img):
         assert img.shape[-1] == 3
-        img = cv2.resize(img, (224,224))
+        img = cv2.resize(img, (224, 224))
         batch_x = img.reshape((-1, 224, 224, 3))
         fd = {}
         fd[self.input] = batch_x
@@ -202,29 +206,32 @@ class VGG19:
         label = ['u', 'd', 'm']
         return label[predict]
 
-    def train(self, batch_x, batch_y, lr=1e-4, partial_train=True, fine_tune=True):
+    def train(self, batch_x, batch_y, lr=1e-4, fine_tune=True):
         fd = {}
         fd[self.input] = batch_x
         fd[self.groundtruth] = batch_y
         fd[self.lr] = lr
-        
+
         if fine_tune:
-            op = self.optimizer 
+            op = self.optimizer
         else:
             op = self.partial_optimizer
 
         loss, accuracy, _ = self.sess.run(
-                [self.loss, self.accuracy, op], fd)
+            [self.loss, self.accuracy, op], fd)
         return loss, accuracy
 
-if __name__ == '__main__':
-    vgg19 = VGG19(vgg19_npy_path='./../weights/fine_tune_weight.npy')  # Initialize VGG19 object
-    img = cv2.imread('./../data/test-data/0/0.png')     # open a BGR image via opencv-python
-    
-    # VGG19.predict() take a BGR image as input, and return a label.
-    # Returned label stands for the location of 馬拉巴栗種子芽的點.
-    # Returned label can be either 'u', 'd', or 'm' 
-    # which represent up, down , and medium correspondingly.
-    label_predicted = vgg19.predict(img)
 
-    print(label_predicted)
+# if __name__ == '__main__':
+#     # Initialize VGG19 object
+#     vgg19 = VGG19(vgg19_npy_path='./../weights/fine_tune_weight.npy')
+#     # open a BGR image via opencv-python
+#     img = cv2.imread('./../data/test-data/0/0.png')
+
+#     # VGG19.predict() take a BGR image as input, and return a label.
+#     # Returned label stands for the location of 馬拉巴栗種子芽的點.
+#     # Returned label can be either 'u', 'd', or 'm'
+#     # which represent up, down , and medium correspondingly.
+#     label_predicted = vgg19.predict(img)
+
+#     print(label_predicted)
