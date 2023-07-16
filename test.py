@@ -1,7 +1,7 @@
 import cv2
 import pandas as pd
 import numpy as np
-from net import VGG19
+from net.vgg19 import VGG19
 import time
 from statistics import mean
 import random
